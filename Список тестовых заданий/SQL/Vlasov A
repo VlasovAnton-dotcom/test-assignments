@@ -1,0 +1,56 @@
+Задача 1. Поиск должников по профсоюзным взносам за прошлый месяц (Oracle)
+WITH last_month_students AS (
+  SELECT s.id, s.name, s.surname
+  FROM Student s
+),
+total_payments AS (
+  SELECT p.student_id, SUM(p.amount) AS total_paid
+  FROM Payment p
+  WHERE TRUNC(p.payment_date, 'MONTH') = TRUNC(ADD_MONTHS(SYSDATE, -1), 'MONTH')
+  GROUP BY p.student_id
+)
+SELECT
+  ls.id,
+  ls.name,
+  ls.surname,
+  (100 - COALESCE(tp.total_paid, 0)) AS debt_amount
+FROM last_month_students ls
+LEFT JOIN total_payments tp ON ls.id = tp.student_id
+WHERE (100 - COALESCE(tp.total_paid, 0)) > 0
+ORDER BY ls.surname, ls.name;
+
+________________________________________
+Задача 2. Запросы к таблице db
+1. Средняя зарплата руководителей:
+SELECT AVG(DISTINCT d1.payment) AS avg_boss_salary
+FROM db d1
+WHERE d1.user_id IN (SELECT DISTINCT boss_id FROM db WHERE boss_id IS NOT NULL);
+
+2. Среднее количество прямых подчинённых у руководителей:
+SELECT AVG(subordinate_count) AS avg_subordinates_per_boss
+FROM (
+  SELECT boss_id, COUNT(*) AS subordinate_count
+  FROM db
+  WHERE boss_id IS NOT NULL
+  GROUP BY boss_id
+) subordinates;
+
+3. Сотрудники с зарплатой выше, чем у их руководителей:
+SELECT
+  e.user_id AS employee_id,
+  e.payment AS employee_salary,
+  b.user_id AS boss_id,
+  b.payment AS boss_salary
+FROM db e
+JOIN db b ON e.boss_id = b.user_id
+WHERE e.payment > b.payment;
+
+________________________________________
+Задача 3. Владельцы котов абиссинской породы
+SELECT u.surname, u.name
+FROM users u
+JOIN pets p ON u.user_id = p.user_id
+WHERE p.type = 'cat' AND p.breed = 'Abyssinian'
+ORDER BY u.surname ASC, u.name ASC;
+
+•	Сортируем результат по фамилии, затем по имени (в алфавитном порядке).
