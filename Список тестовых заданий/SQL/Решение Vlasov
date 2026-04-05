@@ -1,0 +1,11 @@
+SELECT 
+    s.surname,
+    s.name,
+    100 - COALESCE(SUM(p.amount), 0) AS debt
+FROM Student s
+LEFT JOIN Payment p 
+    ON s.id = p.student_id
+    AND TRUNC(p.payment_date, 'MM') = ADD_MONTHS(TRUNC(SYSDATE, 'MM'), -1)
+GROUP BY s.id, s.surname, s.name
+HAVING COALESCE(SUM(p.amount), 0) < 100
+ORDER BY debt DESC;
