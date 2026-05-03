@@ -1,0 +1,110 @@
+УСЛОВИЯ ЗАДАЧИ 
+Допустим, что студенты должны ежемесячно выплачивать профсоюзный взнос в размере 100 рублей, при этом им разрешено платить частями в течение месяца. 
+
+Даны две таблицы: 
+студенты: Student (поля id, name, surname) 
+и профсоюзные взносы: Payment (student_id, amount, payment_date). 
+
+Считаем, что платеж студента всегда относится к тому месяцу, в который он платит взнос. 
+Если студент есть в таблице Student, то взнос он платить должен. 
+Напишите SQL-запрос для БД Oracle, который позволит найти должников и сумму долга каждого из них профсоюзу за прошлый месяц 
+(дата запуска может быть любая).
+
+Есть таблица db
+user_id - int32 - id сотрудника
+boss_id - int32? - user_id руководителя
+payment - double - зарплата в рублях
+Напишите SQL запросы, которые отвечают на вопрос:
+Какая средняя зп у руководителей?
+Сколько в среднем прямых подчиненных у руководителей?
+У каких сотрудников зп выше, чем у их руководителей
+
+Имеется две таблицы:
+Таблица users :
+Хранит в себе данные пользователя: его идентификатор, логин, имя и фамилию:
+user_id , login , name , surname
+Таблица pets :
+Содержит в себе информацию о питомцах пользователя:
+Идентификатор пользователя (внешний ключ), идентификатор животного, вид животного, его кличку и породу:
+user_id, pet_id , type, nickname, breed
+Напишите SQL-запрос, возвращающий фамилию и имя всех владельцев котов Абиссинской (Abyssinian) породы.
+++ Отсортировать по алфавиту
+РЕШЕНИЕ – VLASOV – GIGA CHAT - 03-05-2026 + 
+Вот решения для всех ваших задач с использованием SQL для Oracle.
+
+### 1. Поиск должников по профсоюзным взносам за прошлый месяц
+Этот запрос находит студентов, которые не внесли полностью или частично взнос в размере 100 рублей за прошлый месяц. Он учитывает, что платежи могут быть частичными.
+
+```sql
+WITH last_month AS (
+    -- Определяем границы прошлого месяца динамически
+    SELECT 
+        ADD_MONTHS(TRUNC(SYSDATE, 'MM'), -1) AS month_start,
+        LAST_DAY(ADD_MONTHS(SYSDATE, -1)) AS month_end
+    FROM dual
+),
+student_payments AS (
+    -- Суммируем платежи каждого студента за прошлый месяц
+    SELECT 
+        p.student_id,
+        SUM(p.amount) AS total_paid
+    FROM Payment p, last_month lm
+    WHERE p.payment_date BETWEEN lm.month_start AND lm.month_end
+    GROUP BY p.student_id
+)
+-- Находим должников: тех, кто заплатил меньше 100 или не платил вовсе
+SELECT 
+    s.id,
+    s.name,
+    s.surname,
+    100 - NVL(sp.total_paid, 0) AS debt_amount
+FROM Student s
+LEFT JOIN student_payments sp ON s.id = sp.student_id
+WHERE NVL(sp.total_paid, 0) < 100
+ORDER BY s.surname, s.name;
+```
+
+### 2. Запросы по базе данных сотрудников (db)
+**Какая средняя зарплата у руководителей?**
+Этот запрос находит всех сотрудников, которые являются руководителями (у них есть подчиненные), и считает их среднюю зарплату.
+```sql
+SELECT AVG(d1.payment) AS avg_boss_salary
+FROM db d1
+WHERE EXISTS (
+    SELECT 1 FROM db d2 WHERE d2.boss_id = d1.user_id
+);
+```
+
+**Сколько в среднем прямых подчиненных у руководителей?**
+Считаем количество подчиненных для каждого руководителя и находим среднее.
+```sql
+SELECT AVG(sub_count) AS avg_direct_subordinates
+FROM (
+    SELECT COUNT(*) AS sub_count
+    FROM db
+    WHERE boss_id IS NOT NULL
+    GROUP BY boss_id
+);
+```
+*Примечание: этот запрос учитывает только тех руководителей, у которых есть хотя бы один подчиненный.*
+**У каких сотрудников зарплата выше, чем у их руководителей?**
+Сравниваем зарплату сотрудника с зарплатой его начальника.
+```sql
+SELECT e.name AS employee_name, e.payment AS employee_salary, 
+       b.name AS boss_name, b.payment AS boss_salary
+FROM db e
+JOIN db b ON e.boss_id = b.user_id
+WHERE e.payment > b.payment;
+```
+*Примечание: сотрудники без начальника (boss_id IS NULL) в результат не попадут.*
+### 3. Владельцы котов Абиссинской породы
+Запрос объединяет таблицы `users` и `pets`, фильтрует по породе и сортирует результат по фамилии и имени.
+```sql
+SELECT u.surname, u.name 
+FROM users u
+JOIN pets p ON u.user_id = p.user_id
+WHERE LOWER(p.type) = 'cat' AND LOWER(p.breed) = 'abyssinian'
+ORDER BY u.surname ASC, u.name ASC;
+```
+*Примечание: `LOWER` используется для того, чтобы поиск был нечувствителен к регистру.*
+
