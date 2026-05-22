@@ -1,0 +1,68 @@
+Vlasov - решения - задания Web.PDF - 22-05-2026
+## 1. Checklist for Testing Video Functionality
+
+### Mobile App: Video Recording
+- [ ] Verify video recording starts and stops as expected.
+- [ ] Check video is saved to device storage after recording.
+- [ ] Test video quality and resolution settings.
+- [ ] Ensure audio is recorded (if applicable) and synchronized.
+- [ ] Validate behavior when storage is full.
+- [ ] Test recording with different device orientations.
+- [ ] Confirm app does not crash during extended recording.
+
+### Mobile App: Video Upload
+- [ ] Upload video successfully to the web service.
+- [ ] Verify upload progress indicator is displayed.
+- [ ] Test upload with valid and invalid network conditions (Wi-Fi, mobile data, no connection).
+- [ ] Confirm error handling for failed uploads (retry, notification).
+- [ ] Check that uploaded video appears on the web service.
+- [ ] Validate upload of large files and edge cases (max file size).
+
+### Web Service: Video Name Editing
+- [ ] Edit video name in text field and save changes.
+- [ ] Cancel editing without saving changes.
+- [ ] Validate input restrictions (max length, special characters).
+- [ ] Ensure edited name persists after page refresh.
+- [ ] Check for error messages on invalid input.
+- [ ] Confirm UI updates immediately after save.
+
+---
+
+## II. Bug Reports
+
+### Bug 1: Broken Video Link in Email
+**Summary:** Video link in email does not open the video player.
+**Steps to Reproduce:**
+1. Enter a valid email in the form.
+2. Click "Send".
+3. Open the received email and click the video link.
+**Expected Result:** Video player opens and plays the video.
+**Actual Result:** Link leads to a "404 Not Found" error page.
+**Environment:** Web form, Chrome 114, Gmail.
+**Attachments:** Screenshot of error page, email content.
+
+### Bug 2: Email Not Received After Form Submission
+**Summary:** No email is received after submitting a valid email address.
+**Steps to Reproduce:**
+1. Enter a valid email in the form.
+2. Click "Send".
+3. Check inbox and spam folder.
+**Expected Result:** Email with video link is received within 1 minute.
+**Actual Result:** No email received after 10 minutes.
+**Environment:** Web form, Firefox 115, Outlook.
+**Attachments:** Network logs, form submission confirmation.
+
+---
+
+## III. When to Stop Testing
+
+Testing should be stopped when:
+
+- All critical and major defects are resolved and verified.
+- Test coverage meets the requirements and all test cases are executed.
+- The product meets acceptance criteria defined by stakeholders.
+- Remaining issues are low-priority and do not block release.
+- The risk of releasing with known issues is acceptable to the business.
+- The project timeline or budget constraints require release.
+
+However, testing is never truly "complete"—it is often suspended based on risk, priorities, and resource availability.
