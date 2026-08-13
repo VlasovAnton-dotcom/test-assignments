@@ -1,0 +1,113 @@
+ТЕСТИРОВАНИЕ ВЕРСТКИ И WEB – 
+Задание №3 – Решение – Vlasov – 13-08-2026
+
+Вот пример небольшого тестового сценария (на Python + requests), который проверяет, что покупка продукта/ПИФа через указанные ссылки работает корректно на уровне HTTP (доступность, редиректы, форма, успешный ответ). Это **не** реальная покупка, а автотест для QA/разработки.
+
+## Что проверяем
+
+- Доступность страницы покупки (`200 OK` или ожидаемый редирект).
+- Наличие ключевых элементов формы (например, поле суммы, кнопка «Купить»/«Оплатить»).
+- Отсутствие ошибок доступа (4xx/5xx).
+- Корректность параметров в URL (например, `pif=10`).
+
+## Пример сценария (Python)
+
+```python
+import requests
+import re
+from http import HTTPStatus
+
+BUY_URLS = [
+    "https://sistema-capital.com/buy/?pif=10",
+    "http://mts.investments/",
+]
+
+EXPECTED_KEYWORDS_IN_BODY = [
+    "купить",
+    "оплатить",
+    "сумма",
+    "ПИФ",
+]
+
+def check_buy_page(url: str, timeout: int = 10) -> dict:
+    result = {
+        "url": url,
+        "status_code": None,
+        "final_url": None,
+        "ok": False,
+        "errors": [],
+        "has_form": False,
+        "has_buy_keywords": False,
+    }
+
+    try:
+        resp = requests.get(url, timeout=timeout, allow_redirects=True)
+        result["status_code"] = resp.status_code
+        result["final_url"] = resp.url
+
+        if resp.status_code not in (HTTPStatus.OK, HTTPStatus.FOUND, HTTPStatus.MOVED_PERMANENTLY):
+            result["errors"].append(f"Unexpected status code: {resp.status_code}")
+
+        # Проверка на наличие формы
+        if "<form" in resp.text.lower():
+            result["has_form"] = True
+        else:
+            result["errors"].append("No <form> tag found on page")
+
+        # Проверка ключевых слов
+        text_lower = resp.text.lower()
+        if any(kw in text_lower for kw in EXPECTED_KEYWORDS_IN_BODY):
+            result["has_buy_keywords"] = True
+        else:
+            result["errors"].append("Expected buy-related keywords not found")
+
+        result["ok"] = (
+            resp.status_code in (HTTPStatus.OK, HTTPStatus.FOUND, HTTPStatus.MOVED_PERMANENTLY)
+            and result["has_form"]
+            and result["has_buy_keywords"]
+            and len(result["errors"]) == 0
+        )
+
+    except Exception as e:
+        result["errors"].append(str(e))
+        result["ok"] = False
+
+    return result
+
+
+def run_tests():
+    print("Running purchase page checks...\n")
+    for url in BUY_URLS:
+        res = check_buy_page(url)
+        status = "✅ PASS" if res["ok"] else "❌ FAIL"
+        print(f"{status} | {url}")
+        print(f"  Status: {res['status_code']} → {res['final_url']}")
+        if res["errors"]:
+            print("  Errors:")
+            for err in res["errors"]:
+                print(f"    - {err}")
+        print()
+
+
+if __name__ == "__main__":
+    run_tests()
+```
+
+## Как использовать
+
+1. Сохраните код в файл, например `test_buy_pages.py`.
+2. Установите зависимости (если нужно):  
+   ```bash
+   pip install requests
+   ```
+3. Запустите:  
+   ```bash
+   python test_buy_pages.py
+   ```
+
+## Что можно расширить
+
+- Добавить проверку конкретных полей формы по `name`/`id` (сумма, номер счёта и т.п.).
+- Проверять, что `pif=10` действительно соответствует ожидаемому продукту (по заголовку, описанию на странице).
+- Интегрировать в CI (GitHub Actions, GitLab CI) как регрессионный тест доступности и структуры страницы покупки.
+- Для более глубокой проверки (например, эмуляция клика по кнопке) использовать `playwright` или `selenium`.
