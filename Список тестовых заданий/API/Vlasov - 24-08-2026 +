@@ -1,0 +1,127 @@
+Vlasov - 24-08-2026 - Задание Постман и Коллекция
+
+## Оценка выполнения задания
+
+**Временная оценка:** 4-5 часов на создание полной коллекции с учетом:
+* Анализа документации (1 час)
+* Создания всех запросов (2 часа)
+* Написания тестовых данных (30 минут)
+* Проверки работоспособности (30 минут)
+* Форматирования и документирования (30 минут)
+
+**Дата завершения:** 24.08.2026 до 15:00 (с учетом времени на проверку и корректировку)
+
+## Структура коллекции Postman
+
+### Environment Variables
+```json
+{
+    "host": "partner.agentapp.ru",
+    "api_version": "v1",
+    "username": "qa@qa.qa",
+    "password": "111",
+    "http_schema": "https",
+    "token": "",
+    "driver_id": "",
+    "owner_id": "",
+    "insurant_id": "",
+    "car_id": "",
+    "insured_object_id": "",
+    "agreement_id": ""
+}
+```
+
+### Запросы коллекции
+
+1. **Авторизация**
+```
+POST {{http_schema}}://{{host}}/{{api_version}}/users/obtain-token
+Body:
+{
+    "username": "{{username}}",
+    "password": "{{password}}"
+}
+```
+
+2. **Создание водителя**
+```
+POST {{http_schema}}://{{host}}/{{api_version}}/insured_objects/drivers
+Body:
+{
+    "first_name": "Иван",
+    "last_name": "Иванов",
+    "patronymic": "Иванович",
+    "birth_date": "1990-01-01",
+    "driving_experience_started": "2010-10-10"
+}
+```
+
+3. **Создание собственника**
+```
+POST {{http_schema}}://{{host}}/{{api_version}}/insured_objects/owners/natural_persons
+Body:
+{
+    "last_name": "Петров",
+    "first_name": "Петр",
+    "patronymic": "Петрович",
+    "birth_date": "1987-01-13",
+    "credential": [
+        {
+            "credential_type": "RUSSIAN_INTERNAL_PASSPORT",
+            "issue_date": "2017-03-08",
+            "issue_point": "УФМС",
+            "issue_point_code": "123-456",
+            "number": "123456",
+            "series": "1234"
+        }
+    ],
+    "address": [
+        {
+            "address_query": "г Санкт-Петербург, ул Ленина, д 1, кв 1",
+            "address_type": "LEGAL_ADDRESS"
+        }
+    ]
+}
+```
+
+4. **Создание страхователя** (аналогично собственнику)
+
+5. **Создание автомобиля**
+```
+POST {{http_schema}}://{{host}}/v3/insured_objects/cars
+Body:
+{
+    "car_model_id": 864026180,
+    "engine_power": 211,
+    "vin_number": "WAUZZZ8T4BA037241",
+    "manufacturing_year": 2010,
+    "credential": [
+        {
+            "credential_type": "VEHICLE_REGISTRATION",
+            "issue_date": "2010-11-01",
+            "number": "267461",
+            "series": "78УН"
+        }
+    ]
+}
+```
+
+6. **Создание объекта страхования**
+```
+POST {{http_schema}}://{{host}}/{{api_version}}/insured_objects/
+Body:
+{
+    "drivers": ["{{driver_id}}"],
+    "owner": "{{owner_id}}",
+    "car": "{{car_id}}",
+    "insurant": "{{insurant_id}}"
+}
+```
+
+7. **Создание договора**
+```
+POST {{http_schema}}://{{host}}/v3/agreements/calculations
+Body:
+{
+    "valid_from": "2026-08-24",
+    "valid
