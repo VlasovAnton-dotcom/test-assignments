@@ -1,0 +1,45 @@
+Zadanie #5 - Vlasov - 09-09-26
+1. Выбор всех полей для стран Mexico или Germany
+Для решения этой задачи используется оператор SELECT с перечислением символа *, который означает выборку всех столбцов таблицы. Для фильтрации по нескольким значениям одного поля применяется логический оператор OR. Также можно использовать оператор IN, который делает запрос более лаконичным.
+sql
+SELECT * 
+FROM Customers
+WHERE Country = 'Mexico' OR Country = 'Germany';
+Альтернативный вариант:
+sql
+SELECT * 
+FROM Customers
+WHERE Country IN ('Mexico', 'Germany');
+Результат выполнения запроса (выборка строк):
+CustomerID	CustomerName	ContactName	Address	City	PostalCode	Country
+1	Alfreds Futterkiste	Maria Anders	Obere Str. 57	Berlin	12209	Germany
+2	Ana Trujillo Emparedados y helados	Ana Trujillo	Avda. de la Constitución 2222	México D.F.	05021	Mexico
+3	Antonio Moreno Taquería	Antonio Moreno	Mataderos 2312	México D.F.	05023	Mexico
+2. Выбор клиентов, имена которых начинаются на «А»
+Для поиска значений по маске в языке SQL используется оператор LIKE. Символ процента % заменяет любую последовательность символов. Таким образом, условие 'A%' найдет все строки, где значение начинается с заглавной буквы А. Стоит учитывать, что во многих базах данных (например, PostgreSQL) сравнение регистрозависимо, поэтому если в таблице могут быть имена со строчной буквы, следует привести поле к верхнему регистру функцией UPPER().
+sql
+SELECT *
+FROM Customers
+WHERE CustomerName LIKE 'A%';
+Результат выполнения запроса (выборка строк):
+CustomerID	CustomerName	ContactName	Address	City	PostalCode	Country
+1	Alfreds Futterkiste	Maria Anders	Obere Str. 57	Berlin	12209	Germany
+2	Ana Trujillo Emparedados y helados	Ana Trujillo	Avda. de la Constitución 2222	México D.F.	05021	Mexico
+4	Around the Horn	Thomas Hardy	120 Hanover Sq.	London	WA1 1DP	UK
+3. Присвоение клиенту №1 нового адреса и города
+Для изменения существующих данных в базе используется команда UPDATE. В конструкции SET указываются новые значения для нужных столбцов. Чтобы изменить данные только у конкретного клиента, обязательно добавляется условие WHERE по первичному ключу (CustomerID). Без этого условия новый адрес применится ко всем записям в таблице.
+sql
+UPDATE Customers
+SET Address = '[Новый адрес]', City = '[Новый город]'
+WHERE CustomerID = 1;
+Пример заполнения реальными данными из вашей задачи (если нужно просто перенести данные другого клиента): Если под «новым адресом» подразумевается замена данных первого клиента на данные второго:
+sql
+UPDATE Customers
+SET Address = 'Avda. de la Constitución 2222', City = 'México D.F.'
+WHERE CustomerID = 1;
+После выполнения команды структура таблицы изменится следующим образом (измененные ячейки выделены контекстно):
+CustomerID	CustomerName	ContactName	Address	City	PostalCode	Country
+1	Alfreds Futterkiste	Maria Anders	Avda. de la Constitución 2222	México D.F.	12209	Germany
+2	Ana Trujillo Emparedados y helados	Ana Trujillo	Avda. de la Constitución 2222	México D.F.	05021	Mexico
+...	...	...	...	...	...	...
+
