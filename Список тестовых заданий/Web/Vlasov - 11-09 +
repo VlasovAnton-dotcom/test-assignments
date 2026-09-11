@@ -1,0 +1,259 @@
+Web + Макет - 11-09-26 + 
+## Процесс тестирования раздела «Платежи» (Finance)
+
+Ниже — структурированный подход к тестированию раздела «Платежи» с акцентом на статьи типа «Уменьшаемый план», приоритизированный чек-лист функционального тестирования, набор инструментов и 3 примера spec-файлов для Cypress. В конце — шаблон краткого баг-репорта.
+
+## 1) Процесс тестирования раздела «Платежи»
+
+Цель: убедиться, что платежи (в т.ч. привязанные к тарифным планам, включая «Уменьшаемый план») корректно создаются, проводятся, отображаются, влияют на баланс/статусы, обрабатывают ошибки и не допускают двойных списаний. [sky](https://sky.pro/wiki/media/kak-testirovat-internet-magaziny-i-elektronnye-platezhi/)
+
+### 1.1. Подготовка и данные
+- Авторизация: admin@admin.ad:admin (и, при необходимости, тестовые пользователи с разными ролями). [user_background]
+- Тестовые сценарии по планам: базовый план, «Уменьшаемый план» (проверить уменьшение суммы/лимита/остатка при оплате и при отмене). [user_background]
+- Моки/песочница платёжного шлюза: использовать тестовые карты и сценарии (успех, отказ, 3DS, таймаут). [hirehi](https://hirehi.ru/blog/testirovanie-platezhei-chto-proveriat-chtoby-ne-teriat-dengi-na-melochakh)
+- Предусловия: чистый стейт (сброс транзакций), известные балансы, фиксированные суммы для воспроизводимости. [habr](https://habr.com/ru/articles/715262/)
+
+### 1.2. Сценарии (высокоуровнево)
+- Создание платежа из раздела «Платежи» (ручной платёж, оплата счёта, пополнение баланса). [sky](https://sky.pro/wiki/media/kak-testirovat-internet-magaziny-i-elektronnye-platezhi/)
+- Привязка платежа к статье/плану: выбрать «Уменьшаемый план», проверить пересчёт доступного лимита/остатка после оплаты. [user_background]
+- Обработка ошибок: недостаточные средства, неверные реквизиты, недоступность шлюза, отмена пользователем. [sky](https://sky.pro/wiki/media/kak-testirovat-internet-magaziny-i-elektronnye-platezhi/)
+- Пост-условия: история платежей, статусы, уведомления, чеки, синхронизация с внешним шлюзом (webhook/callback). [sky](https://sky.pro/wiki/media/kak-testirovat-internet-magaziny-i-elektronnye-platezhi/)
+
+### 1.3. Особое внимание к «Уменьшаемому плану»
+- Проверить, что при оплате по статье «Уменьшаемый план» система уменьшает именно тот параметр, который задуман (например, остаток лимита плана, доступный объём услуг, квоту), и не затрагивает другие статьи. [user_background]
+- Проверить граничные условия: оплата ровно до нуля, оплата сверх доступного остатка (должна блокироваться или корректироваться), частичная оплата и её влияние на план. [habr](https://habr.com/ru/articles/715262/)
+- Проверить отмену/возврат: восстановление уменьшенного параметра плана, корректные статусы и история. [habr](https://habr.com/ru/articles/715262/)
+
+## 2) Приоритизированный чек-лист функционального тестирования (Платежи)
+
+Приоритеты: P0 — критично для релиза, P1 — важно, P2 — желательно.
+
+### P0 (критично)
+- Успешный платёж: сумма, валюта, комиссия, итог совпадают на экране оплаты, в платёжной системе, в БД и в истории. [sky](https://sky.pro/wiki/media/kak-testirovat-internet-magaziny-i-elektronnye-platezhi/)
+- Статусы: после успешной оплаты статус платежа и связанного заказа/счёта меняется корректно; отображается экран успеха. [hirehi](https://hirehi.ru/blog/testirovanie-platezhei-chto-proveriat-chtoby-ne-teriat-dengi-na-melochakh)
+- «Уменьшаемый план»: после оплаты корректно уменьшается целевой параметр плана (лимит/квота/остаток); пересчёт видим в UI и в данных. [user_background] [habr](https://habr.com/ru/articles/715262/)
+- Защита от двойного списания: повторный запрос/повторный webhook не создают второй платёж. [hirehi](https://hirehi.ru/blog/testirovanie-platezhei-chto-proveriat-chtoby-ne-teriat-dengi-na-melochakh)
+- Обработка отказов: понятное сообщение об ошибке при отказе банка/шлюза; баланс и статусы не меняются ложно. [sky](https://sky.pro/wiki/media/kak-testirovat-internet-magaziny-i-elektronnye-platezhi/)
+
+### P1 (важно)
+- Валидация вводов: формат номера карты/реквизитов, маски, разные форматы ввода (пробелы, дефисы). [sky](https://sky.pro/wiki/media/kak-testirovat-internet-magaziny-i-elektronnye-platezhi/)
+- Лимиты: мин/макс сумма транзакции, округления, комиссии, скидки/промокоды. [sky](https://sky.pro/wiki/media/kak-testirovat-internet-magaziny-i-elektronnye-platezhi/)
+- Прерывание и возврат из платёжной формы: данные заказа не теряются, можно продолжить или безопасно отменить. [sky](https://sky.pro/wiki/media/kak-testirovat-internet-magaziny-i-elektronnye-platezhi/)
+- Webhook/callback: корректная обработка, идемпотентность, задержанные webhook не ломают логику, статусы не расходятся. [hirehi](https://hirehi.ru/blog/testirovanie-platezhei-chto-proveriat-chtoby-ne-teriat-dengi-na-melochakh)
+- Возвраты: полный и частичный возврат, нельзя вернуть больше списанного, статусы и суммы корректны. [habr](https://habr.com/ru/articles/715262/)
+
+### P2 (желательно)
+- Интеграция с внешними модулями: реклама, метрики, аналитика платежей. [habr](https://habr.com/ru/articles/542422/)
+- Юзабилити: понятность интерфейса, подсказки, доступность (клавиатура, скринридер). [sky](https://sky.pro/wiki/media/kak-testirovat-internet-magaziny-i-elektronnye-platezhi/)
+- Логи/аудит: в логах есть достаточно данных для расследования инцидентов без чувствительных данных. [hirehi](https://hirehi.ru/blog/testirovanie-platezhei-chto-proveriat-chtoby-ne-teriat-dengi-na-melochakh)
+
+## 3) Инструменты для процесса тестирования
+
+- Cypress (E2E) + TypeScript: основная автоматизация UI-потоков платежей. [github](https://github.com/slawekradzyminski/cypress-realworld-app)
+- Cypress Real-World App (референс): паттерны тестов для платежей, работа с пользователями и транзакциями. [github](https://github.com/slawekradzyminski/cypress-realworld-app)
+- Мок/песочница платёжного шлюза: Stripe test mode или аналог; тестовые карты и сценарии (успех/отказ/3DS). [stackoverflow](https://stackoverflow.com/questions/68374799/cypress-e2e-tests-for-ecommerce-how-to-test-payment-sandbox-e-g-amazon-multi)
+- Postman/Insomnia: ручные проверки API платежей и webhook. [centicore](https://centicore.ru/news/blog-kompanii/chek-list-dlya-funkczionalnogo-testirovaniya/)
+- DevTools + сниффер (Charles/mitmproxy): отладка запросов к шлюзу и бэкенду. [hirehi](https://hirehi.ru/blog/testirovanie-platezhei-chto-proveriat-chtoby-ne-teriat-dengi-na-melochakh)
+- Allure/отчёты Cypress: визуализация прогонов и скриншоты/видео при падениях. [github](https://github.com/slawekradzyminski/cypress-realworld-app)
+- GitHub/GitLab: хранение spec-файлов и CI-запуски. [github](https://github.com/slawekradzyminski/cypress-realworld-app)
+
+## 4) Примеры spec-файлов Cypress (3 файла)
+
+Ниже — три готовых к использованию spec-файла (TypeScript) для раздела «Платежи». Их можно положить в `cypress/e2e/payments/` вашего репозитория. Ссылки на репозитории с похожими реализациями: Cypress Real-World App (платежи, пользователи, транзакции) и примеры Stripe Checkout. [riccardogiorato](https://www.riccardogiorato.com/blog/a/cypress-stripe-checkout)
+
+### 4.1) `payment_success.cy.ts` — успешный платёж и проверка истории
+
+```ts
+// cypress/e2e/payments/payment_success.cy.ts
+describe('Payments - Successful payment', () => {
+  const loginUrl = 'https://finance.dev.fabrique.studio/accounts/login/';
+  const paymentsUrl = 'https://finance.dev.fabrique.studio/payments/'; // уточните точный путь
+
+  before(() => {
+    cy.visit(loginUrl);
+    cy.get('input[name="username"]').type('admin@admin.ad');
+    cy.get('input[name="password"]').type('admin');
+    cy.get('button[type="submit"]').click();
+    cy.url().should('include', '/accounts/profile/'); // или другая пост-логин страница
+  });
+
+  it('creates a successful payment and verifies history', () => {
+    const amount = 1000;
+    const description = 'Test payment success';
+
+    cy.visit(paymentsUrl);
+    cy.get('[data-testid="create-payment-btn"]').click();
+
+    cy.get('[data-testid="amount-input"]').clear().type(amount.toString());
+    cy.get('[data-testid="description-input"]').clear().type(description);
+    cy.get('[data-testid="submit-payment-btn"]').click();
+
+    // Успешный экран/модалка
+    cy.contains('Оплата успешна', { timeout: 10000 }).should('be.visible');
+
+    // Проверка истории платежей
+    cy.visit(paymentsUrl);
+    cy.get('[data-testid="payments-table"] tbody tr').first().within(() => {
+      cy.contains(amount.toString());
+      cy.contains(description);
+      cy.contains('Успешно'); // или ожидаемый статус
+    });
+  });
+});
+```
+
+### 4.2) `payment_decreasing_plan.cy.ts` — «Уменьшаемый план»: уменьшение лимита/квоты
+
+```ts
+// cypress/e2e/payments/payment_decreasing_plan.cy.ts
+describe('Payments - Decreasing plan (Уменьшаемый план)', () => {
+  const loginUrl = 'https://finance.dev.fabrique.studio/accounts/login/';
+  const plansUrl = 'https://finance.dev.fabrique.studio/plans/'; // уточните путь
+  const paymentsUrl = 'https://finance.dev.fabrique.studio/payments/';
+
+  let initialLimit: number;
+
+  before(() => {
+    cy.visit(loginUrl);
+    cy.get('input[name="username"]').type('admin@admin.ad');
+    cy.get('input[name="password"]').type('admin');
+    cy.get('button[type="submit"]').click();
+    cy.url().should('include', '/accounts/profile/');
+  });
+
+  beforeEach(() => {
+    // Запоминаем текущий лимит по «Уменьшаемому плану»
+    cy.visit(plansUrl);
+    cy.get('[data-testid="decreasing-plan-row"]')
+      .invoke('text')
+      .then((text) => {
+        // Парсим число из строки вида "Лимит: 5000"
+        const match = text.match(/(\d+)/);
+        if (match) initialLimit = parseInt(match[0], 10);
+      });
+  });
+
+  it('decreases plan limit after payment and shows correct remainder', () => {
+    const payAmount = 1500;
+
+    cy.visit(paymentsUrl);
+    cy.get('[data-testid="create-payment-btn"]').click();
+
+    cy.get('[data-testid="plan-select"]').select('Уменьшаемый план');
+    cy.get('[data-testid="amount-input"]').clear().type(payAmount.toString());
+    cy.get('[data-testid="submit-payment-btn"]').click();
+
+    cy.contains('Оплата успешна', { timeout: 10000 }).should('be.visible');
+
+    cy.visit(plansUrl);
+    cy.get('[data-testid="decreasing-plan-row"]').within(() => {
+      cy.contains((initialLimit - payAmount).toString());
+    });
+  });
+
+  it('blocks payment exceeding remaining plan limit', () => {
+    // Предполагаем, что после предыдущего теста лимит уменьшился; для стабильности можно сбрасывать состояние в БД/API
+    const overAmount = initialLimit + 1;
+
+    cy.visit(paymentsUrl);
+    cy.get('[data-testid="create-payment-btn"]').click();
+
+    cy.get('[data-testid="plan-select"]').select('Уменьшаемый план');
+    cy.get('[data-testid="amount-input"]').clear().type(overAmount.toString());
+    cy.get('[data-testid="submit-payment-btn"]').click();
+
+    // Ожидается блокировка и сообщение об ошибке
+    cy.contains('Недостаточно доступного лимита', { timeout: 8000 }).should('be.visible');
+  });
+});
+```
+
+### 4.3) `payment_failure_handling.cy.ts` — обработка отказов и защита от дублей
+
+```ts
+// cypress/e2e/payments/payment_failure_handling.cy.ts
+describe('Payments - Failure handling and idempotency', () => {
+  const loginUrl = 'https://finance.dev.fabrique.studio/accounts/login/';
+  const paymentsUrl = 'https://finance.dev.fabrique.studio/payments/';
+
+  before(() => {
+    cy.visit(loginUrl);
+    cy.get('input[name="username"]').type('admin@admin.ad');
+    cy.get('input[name="password"]').type('admin');
+    cy.get('button[type="submit"]').click();
+    cy.url().should('include', '/accounts/profile/');
+  });
+
+  it('shows clear error on payment decline and does not change balance', () => {
+    const amount = 500;
+
+    cy.visit(paymentsUrl);
+    cy.get('[data-testid="create-payment-btn"]').click();
+
+    cy.get('[data-testid="amount-input"]').clear().type(amount.toString());
+    // Эмуляция отказа: в тестовом шлюзе выбрать карту, вызывающую decline
+    cy.get('[data-testid="card-number"]').type('4000000000000002'); // пример decline-карты (зависит от шлюза)
+    cy.get('[data-testid="submit-payment-btn"]').click();
+
+    cy.contains('Платёж отклонён', { timeout: 10000 }).should('be.visible');
+
+    // Проверка: баланс не изменился (если есть виджет баланса)
+    cy.get('[data-testid="balance-value"]').invoke('text').then((text) => {
+      // Здесь можно сравнить с заранее сохранённым значением, если нужно
+      cy.log(`Balance after decline: ${text}`);
+    });
+  });
+
+  it('prevents duplicate charge on repeated submit', () => {
+    const amount = 700;
+
+    cy.visit(paymentsUrl);
+    cy.get('[data-testid="create-payment-btn"]').click();
+
+    cy.get('[data-testid="amount-input"]').clear().type(amount.toString());
+    const submitBtn = cy.get('[data-testid="submit-payment-btn"]');
+
+    submitBtn.click();
+    // Блокируем повторный клик (в UI может быть disabled-состояние)
+    submitBtn.should('be.disabled');
+
+    // Альтернативно: проверить, что в истории только одна запись с данной суммой и описанием
+    cy.visit(paymentsUrl);
+    cy.get('[data-testid="payments-table"] tbody tr')
+      .contains(amount.toString())
+      .should('have.length', 1);
+  });
+});
+```
+
+Примечание: селекторы `[data-testid="..."]` и пути страниц нужно адаптировать под реальную вёрстку Finance. Для ускорения можно добавить `data-testid` в код или использовать стабильные CSS-селекторы. [github](https://github.com/slawekradzyminski/cypress-realworld-app)
+
+Репозитории-референсы для структуры и паттернов:
+- Cypress Real-World App (платежи, пользователи, транзакции): [https://github.com/slawekradzyminski/cypress-realworld-app](https://github.com/slawekradzyminski/cypress-realworld-app) [github](https://github.com/slawekradzyminski/cypress-realworld-app)
+- Примеры Cypress + Stripe Checkout: [https://github.com/riccardogiorato/cypress-for-everything](https://github.com/riccardogiorato/cypress-for-everything) (пример stripe-checkout.ts) [riccardogiorato](https://www.riccardogiorato.com/blog/a/cypress-stripe-checkout)
+
+## 5) Краткий баг-репорт (шаблон + пример)
+
+Шаблон:
+- Заголовок: Кратко и конкретно (что, где, при каком условии).
+- Окружение: URL, браузер/версия, роль пользователя, данные.
+- Шаги воспроизведения: нумерованный список.
+- Ожидаемый результат: что должно происходить.
+- Фактический результат: что происходит.
+- Влияние: бизнес-риск (двойное списание, неверный лимит плана и т.п.).
+- Вложения: скриншот/видео, логи, запросы/ответы.
+
+Пример (гипотетический баг по «Уменьшаемому плану»):
+- Заголовок: При оплате по статье «Уменьшаемый план» лимит плана не уменьшается, если сумма платежа равна остатку лимита.
+- Окружение: [https://finance.dev.fabrique.studio/](https://finance.dev.fabrique.studio/), Chrome 129, пользователь admin@admin.ad, план «Уменьшаемый план» с лимитом 2000.
+- Шаги:
+  1) Открыть раздел «Платежи» → Создать платёж.
+  2) Выбрать статью «Уменьшаемый план».
+  3) Ввести сумму 2000 (равно текущему лимиту).
+  4) Отправить платёж.
+- Ожидаемый результат: лимит плана становится 0, в истории платёж со статусом «Успешно».
+- Фактический результат: лимит остаётся 2000, платёж отображается как «Успешно».
+- Влияние: некорректный учёт лимитов, риск перерасхода ресурсов по плану. [user_background] [habr](https://habr.com/ru/articles/715262/)
+- Вложения: скриншот экрана платежей и страницы планов, HAR-файл запросов.
+
+Если нужно, могу адаптировать spec-файлы под точную структуру страниц Finance (достаточно прислать скриншоты/селекторы или доступ к staging), а также расширить чек-лист под конкретные бизнес-правила «Уменьшаемого плана».
